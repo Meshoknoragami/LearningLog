@@ -1,0 +1,194 @@
+{% extends "learning_logs/base.html" %}
+{% load markdown_extras %}
+
+{% block page_header %}
+  <h3>
+    {{ topic }}
+    <small><a href="{% url 'learning_logs:edit_topic' topic.id %}">edit topic name</a></small>
+  </h3>
+{% endblock page_header %}
+
+{% block content %}
+
+  <div class="d-flex flex-wrap align-items-center mb-3" style="gap: 0.75rem;">
+    <!-- Кнопка "Add new entry" -->
+    <a href="{% url 'learning_logs:new_entry' topic.id %}"
+       class="btn btn-primary"
+       style="font-size: 1.1rem; padding: 0.4rem 0.75rem;">
+      + Add new entry
+    </a>
+
+    <!-- Поле поиска -->
+    <input type="text" id="entry-search"
+           class="form-control"
+           placeholder="🔍︎ Search in entries..."
+           style="max-width: 240px; font-size: 1.1rem; padding: 0.4rem 0.75rem;">
+
+    <!-- Кнопка сортировки -->
+    <button id="toggle-sort"
+            class="btn btn-outline-secondary"
+            style="font-size: 1.1rem; padding: 0.4rem 0.75rem;">
+      Show oldest first
+    </button>
+  
+    <!-- Кнопка экспорта  -->
+    <a href="{% url 'learning_logs:export_topic' topic.id %}"
+       class="btn btn-outline-secondary"
+       style="font-size: 1.1rem; padding: 0.4rem 0.75rem;">
+      Export topic
+    </a>
+  </div>
+
+  <div id="entries-container">
+    {% for entry in entries %}
+      <div class="card mb-3 entry-card" data-date="{{ entry.date_added.isoformat }}">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <!-- дата + edit/delete -->
+          <div>
+            {{ entry.date_added|date:'M d, Y H:i' }}
+            <small class="ms-2">
+              <a href="{% url 'learning_logs:edit_entry' entry.id %}" class="me-2">edit entry</a>
+              <a href="{% url 'learning_logs:delete_entry' entry.id %}" class="text-danger">delete</a>
+            </small>
+          </div>
+      
+          <!-- кнопка избранного -->
+          <form class="bookmark-form" data-type="entry" data-id="{{ entry.id }}" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm" style="padding: 0; border: none; background: none; cursor: pointer;">
+              {% if entry.is_bookmarked %}
+                <span style="color: gold; font-size: 1.25rem;">★</span>
+              {% else %}
+                <span style="color: #ccc; font-size: 1.25rem;">☆</span>
+              {% endif %}
+            </button>
+          </form>
+        </div>
+        <div class="card-body">
+          {{ entry.text|markdownify }}
+        </div>
+      </div>
+    {% empty %}
+      <p>There are no entries for this topic yet.</p>
+    {% endfor %}
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.getElementById('entries-container');
+        const toggleBtn = document.getElementById('toggle-sort');
+        const searchInput = document.getElementById('entry-search');
+
+        if (!container) return;
+
+        // === Сохраняем исходные данные записей ===
+        const entryCards = container.querySelectorAll('.entry-card');
+        if (!entryCards.length) return;
+
+        const allEntries = Array.from(entryCards).map(el => {
+            const dateStr = el.dataset.date;
+            const date = dateStr ? new Date(dateStr) : new Date(0);
+            const body = el.querySelector('.card-body');
+            const originalHTML = body ? body.innerHTML : '';
+            return { element: el.cloneNode(true), date, originalHTML };
+        });
+
+        let isOldestFirst = false;
+
+        // === Функция подсветки текста ===
+        function highlightText(htmlString, searchTerm) {
+            if (!searchTerm) return htmlString;
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return htmlString.replace(regex, '<mark class="highlight">$1</mark>');
+        }
+
+        // === Отрисовка записей ===
+        function renderEntries(entriesList, searchTerm = '') {
+            container.innerHTML = '';
+            entriesList.forEach(item => {
+                const clone = item.element.cloneNode(true);
+                const body = clone.querySelector('.card-body');
+                if (body) {
+                    if (searchTerm) {
+                        body.innerHTML = highlightText(item.originalHTML, searchTerm);
+                    } else {
+                        body.innerHTML = item.originalHTML;
+                    }
+                }
+                container.appendChild(clone);
+            });
+        }
+
+        // === Поиск ===
+        function applySearchAndSort() {
+            const searchTerm = (searchInput?.value || '').trim();
+            const termLower = searchTerm.toLowerCase();
+
+            let filtered = allEntries;
+            if (termLower) {
+                filtered = allEntries.filter(item => {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = item.originalHTML;
+                    const text = temp.textContent || temp.innerText || '';
+                    return text.toLowerCase().includes(termLower);
+                });
+            }
+
+            // Сортировка
+            filtered.sort((a, b) => {
+                return isOldestFirst
+                    ? a.date - b.date
+                    : b.date - a.date;
+            });
+
+            renderEntries(filtered, termLower);
+        }
+
+        // === Обработчики ===
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                isOldestFirst = !isOldestFirst;
+                this.textContent = isOldestFirst
+                    ? 'Show newest first'
+                    : 'Show oldest first';
+                applySearchAndSort();
+            });
+        }
+
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(applySearchAndSort, 150);
+            });
+        }
+    });
+    document.querySelectorAll('.bookmark-form').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const type = this.dataset.type;
+            const id = this.dataset.id;
+            const button = this.querySelector('button');
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch('{% url "learning_logs:toggle_bookmark" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `type=${type}&id=${id}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.is_bookmarked) {
+                    button.innerHTML = '<span style="color: gold; font-size: 1.2rem;">★</span>';
+                } else {
+                    button.innerHTML = '<span style="color: #ccc; font-size: 1.2rem;">☆</span>';
+                }
+            });
+        });
+    });
+    </script>
+
+{% endblock content %}

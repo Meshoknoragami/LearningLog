@@ -1,0 +1,185 @@
+{% extends "learning_logs/base.html" %}
+{% load time_extras %}
+
+{% block page_header %}
+  <div class="d-flex align-items-center flex-wrap">
+    <h1 class="mb-1">Topics</h1>
+
+    <!-- Поле поиска -->
+    <input type="text" id="topic-search" class="form-control ml-4"
+           placeholder="🔍︎ Search topics..."
+           style="max-width: 240px; font-size: 1.1rem; padding: 0.4rem 0.75rem;">
+
+    <!-- Dropdown сортировка -->
+    <div class="dropdown mb-0 ml-4">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+              type="button" id="sortDropdown" data-toggle="dropdown"
+              style="font-size: 1.1rem; padding: 0.4rem 0.75rem;">
+        Sort: Newest first
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+        <li><a class="dropdown-item" href="#" data-sort="newest">Newest first</a></li>
+        <li><a class="dropdown-item" href="#" data-sort="oldest">Oldest first</a></li>
+        <li><a class="dropdown-item" href="#" data-sort="az">A → Z</a></li>
+        <li><a class="dropdown-item" href="#" data-sort="za">Z → A</a></li>
+      </ul>
+    </div>
+  </div>
+{% endblock page_header %}
+
+{% block content %}
+  {% if topics %}
+    <div id="topics-container" class="list-group">
+      {% for topic in topics %}
+        <div class="list-group-item d-flex justify-content-between align-items-center topic-item"
+             data-name="{{ topic|lower }}"
+             data-date="{{ topic.date_added.isoformat }}">
+          <div>
+            <h4>
+              <a href="{% url 'learning_logs:topic' topic.id %}" class="text-decoration-none">
+                {{ topic.text }}
+              </a>
+              <br>
+              <small class="text-muted">
+                {{ topic.entries_count }} entry{{ topic.entries_count|pluralize }}
+                {% if topic.last_entry_date %}
+                  • last {{ topic.last_entry_date|rough_timesince }} ago
+                {% else %}
+                  • no entries yet
+                {% endif %}
+              </small>
+            </h4>
+          </div>
+
+          <!-- Группа кнопок справа: избранное + delete -->
+          <div class="d-flex align-items-center" style="gap: 0.5rem;">
+            <!-- Кнопка избранного -->
+            <form class="bookmark-form" data-type="topic" data-id="{{ topic.id }}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm" style="padding: 0; border: none; background: none; cursor: pointer;">
+                {% if topic.is_bookmarked %}
+                  <span style="color: gold; font-size: 1.2rem;">★</span>
+                {% else %}
+                  <span style="color: #ccc; font-size: 1.2rem;">☆</span>
+                {% endif %}
+              </button>
+            </form>
+
+            <!-- Кнопка удаления -->
+            <a href="{% url 'learning_logs:delete_topic' topic.id %}"
+               class="btn btn-sm btn-outline-danger">
+              Delete
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No topics have been added yet.</p>
+  {% endif %}
+
+  <a class="btn btn-lg btn-primary mt-3" href="{% url 'learning_logs:new_topic' %}" role="button">
+    + Add a new topic
+  </a>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const container = document.getElementById('topics-container');
+      if (!container) return;
+
+      const topicElements = container.querySelectorAll('.list-group-item');
+      if (!topicElements.length) return;
+
+      // Сохраняем данные
+      const topicsData = Array.from(topicElements).map(el => {
+          const link = el.querySelector('h4 a');
+          const name = link ? link.textContent.trim() : '';
+          // Пробуем взять дату из data-date, иначе из Django-рендера
+          const dateStr = el.dataset.date || el.querySelector('[data-date]')?.dataset.date;
+          const date = dateStr ? new Date(dateStr) : new Date();
+          return { element: el.cloneNode(true), name, date };
+      });
+
+      const searchInput = document.getElementById('topic-search');
+      const sortButton = document.getElementById('sortDropdown');
+      let currentSort = 'newest';
+
+      function renderTopics(topicsList) {
+          container.innerHTML = '';
+          topicsList.forEach(t => container.appendChild(t.element.cloneNode(true)));
+      }
+
+      function applyFilterAndSort() {
+          let filtered = [...topicsData];
+          const term = (searchInput?.value || '').trim().toLowerCase();
+          if (term) {
+              filtered = filtered.filter(t => t.name.toLowerCase().includes(term));
+          }
+
+          filtered.sort((a, b) => {
+              switch (currentSort) {
+                  case 'oldest': return a.date - b.date;
+                  case 'az': return a.name.localeCompare(b.name);
+                  case 'za': return b.name.localeCompare(a.name);
+                  default: return b.date - a.date; // newest
+              }
+          });
+
+          renderTopics(filtered);
+      }
+
+      // Поиск
+      if (searchInput) {
+          let t;
+          searchInput.addEventListener('input', () => {
+              clearTimeout(t);
+              t = setTimeout(applyFilterAndSort, 150);
+          });
+      }
+
+      // Сортировка
+      document.querySelectorAll('.dropdown-item').forEach(item => {
+          item.addEventListener('click', function (e) {
+              e.preventDefault();
+              currentSort = this.dataset.sort;
+              const labels = {
+                  'newest': 'Newest first',
+                  'oldest': 'Oldest first',
+                  'az': 'A → Z',
+                  'za': 'Z → A'
+              };
+              if (sortButton) {
+                  sortButton.textContent = 'Sort: ' + labels[currentSort];
+              }
+              applyFilterAndSort();
+          });
+      });
+  });
+  document.querySelectorAll('.bookmark-form').forEach(form => {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const type = this.dataset.type;
+        const id = this.dataset.id;
+        const button = this.querySelector('button');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('{% url "learning_logs:toggle_bookmark" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `type=${type}&id=${id}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_bookmarked) {
+                button.innerHTML = '<span style="color: gold; font-size: 1.2rem;">★</span>';
+            } else {
+                button.innerHTML = '<span style="color: #ccc; font-size: 1.2rem;">☆</span>';
+            }
+        });
+    });
+  });
+  </script>
+{% endblock content %}

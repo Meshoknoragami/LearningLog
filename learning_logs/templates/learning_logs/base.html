@@ -1,0 +1,253 @@
+{% load bootstrap4 %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Learning Log</title>
+
+    {% bootstrap_css %}
+    <!-- Markdown renderer for preview -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+      body.dark-theme {
+        background-color: #121212 !important;
+        color: #e0e0e0;
+      }
+      body.dark-theme .container,
+      body.dark-theme .card,
+      body.dark-theme .list-group-item,
+      body.dark-theme .navbar {
+        background-color: #1e1e1e !important;
+        color: #e0e0e0;
+      }
+      body.dark-theme .card,
+      body.dark-theme .list-group-item {
+        border-color: #333 !important;
+      }
+      body.dark-theme .text-muted {
+        color: #aaa !important;
+      }
+      body.dark-theme .navbar-brand,
+      body.dark-theme .nav-link,
+      body.dark-theme .navbar-text {
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .btn-primary {
+        background-color: #0b5ed7 !important;
+        border-color: #0b5ed7 !important;
+      }
+      body.dark-theme .btn-outline-danger {
+        color: #ff6b6b !important;
+        border-color: #ff6b6b !important;
+      }
+      body.dark-theme .btn-outline-danger:hover {
+        background-color: #ff6b6b !important;
+        color: white !important;
+      }
+
+      /* ПОЛЕ ВВОДА (поиск) */
+      body.dark-theme .form-control {
+        background-color: #2d2d2d !important;
+        border-color: #444 !important; /* ← !important */
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme .form-control::placeholder {
+        color: #888 !important;
+      }
+
+      /*  КНОПКА СОРТИРОВКИ  */
+      body.dark-theme .btn-outline-secondary {
+        color: #aaa !important;
+        border-color: #444 !important; /* ← !important */
+        background-color: transparent !important;
+      }
+      body.dark-theme .btn-outline-secondary:hover {
+        background-color: #333 !important;
+        border-color: #555 !important;
+        color: #fff !important;
+      }
+
+      /* КНОПКА ПЕРЕКЛЮЧАТЕЛЯ ТЕМЫ */
+      #theme-toggle {
+        background: none;
+        border: none;
+        color: white !important;
+        font-size: 1.4rem;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+      #theme-toggle:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+      }
+
+      /*  DROPDOWN В ТЁМНОЙ ТЕМЕ */
+      body.dark-theme .dropdown-menu {
+        background-color: #2d2d2d !important;
+        border-color: #444 !important;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3) !important;
+      }
+      body.dark-theme .dropdown-item {
+        color: #ccc !important;
+      }
+      body.dark-theme .dropdown-item:hover,
+      body.dark-theme .dropdown-item:focus {
+        background-color: #3a3a3a !important;
+        color: #fff !important;
+      }
+      body.dark-theme .dropdown-item:active {
+        background-color: #444 !important;
+        color: #fff !important;
+      }
+
+      /*  СВЕТЛАЯ ТЕМА: согласование обводки */
+      .btn-outline-secondary {
+        border-color: #ced4da !important;
+      }
+      .btn-outline-secondary:hover {
+        border-color: #adb5bd !important;
+      }
+      body.dark-theme .jumbotron {
+        background-color: #1a1a1a !important;
+        color: #e0e0e0 !important;
+        border: 1px solid #333;
+      }
+      /* Подсветка найденного текста */
+      .highlight {
+        background-color: #ffeb3b !important; /* Яркий жёлтый для светлой темы */
+        color: #000 !important;
+        padding: 0 2px;
+        border-radius: 2px;
+      }
+
+      /* В тёмной теме — более мягкий жёлтый */
+      body.dark-theme .highlight {
+        background-color: #664e00 !important;
+        color: #fff !important;
+      }
+      body.dark-theme #preview-panel {
+        background-color: #1e1e1e !important;
+        border-color: #333 !important;
+        color: #e0e0e0 !important;
+      }
+      body.dark-theme #preview-panel a {
+        color: #4dabf7;
+      }
+      body.dark-theme #preview-panel code {
+        background-color: #2d2d2d;
+        color: #e0e0e0;
+      }
+      /* Поле ввода в тёмной теме — для форм (new_topic, new_entry и т.д.) */
+      body.dark-theme .form-control {
+          background-color: #2d2d2d !important;
+          border-color: #444 !important;
+          color: #e0e0e0 !important;
+      }
+      body.dark-theme .form-control::placeholder {
+          color: #888 !important;
+      }
+    </style>
+
+    {% bootstrap_javascript jquery='full' %}
+  </head>
+
+  <body class="{% if request.COOKIES.theme == 'dark' %}dark-theme{% endif %}">
+
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4 border">
+      <a class="navbar-brand" href="{% url 'learning_logs:index' %}">Learning Log</a>
+
+      <button class="navbar-toggler" type="button" data-toggle="collapse"
+        data-target="#navbarCollapse" aria-controls="navbarCollapse"
+        aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarCollapse">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'learning_logs:topics' %}">Topics</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'learning_logs:bookmarks' %}">Bookmarks</a>
+          </li>
+        </ul>
+
+        <ul class="navbar-nav ml-auto d-flex flex-row align-items-center">
+          {% if user.is_authenticated %}
+            <li class="nav-item">
+              <button id="theme-toggle" title="Toggle dark/light mode">
+                {% if request.COOKIES.theme == 'dark' %}◑{% else %}◐{% endif %}
+              </button>
+            </li>
+            <li class="nav-item">
+              <span class="navbar-text mr-2">Hello, {{ user.username }}.</span>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'users:logout' %}">Log out</a>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'users:register' %}">Register</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'users:login' %}">Log in</a>
+            </li>
+          {% endif %}
+        </ul>
+      </div>
+    </nav>
+
+    <main role="main" class="container">
+      <div class="pb-2 mb-2 border-bottom">
+        {% block page_header %}{% endblock page_header %}
+      </div>
+      <div>
+        {% block content %}{% endblock content %}
+      </div>
+    </main>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const toggleBtn = document.getElementById('theme-toggle');
+        if (!toggleBtn) return;
+
+        // Читаем тему из localStorage (приоритет) или из cookie (резерв)
+        let theme = localStorage.getItem('theme');
+        if (!theme) {
+          // fallback: смотрим, есть ли класс dark-theme (из cookie)
+          theme = document.body.classList.contains('dark-theme') ? 'dark' : 'light';
+        }
+
+        applyTheme(theme);
+
+        toggleBtn.addEventListener('click', function () {
+          const newTheme = theme === 'dark' ? 'light' : 'dark';
+          applyTheme(newTheme);
+          localStorage.setItem('theme', newTheme);
+        });
+
+        function applyTheme(themeName) {
+          theme = themeName;
+          document.body.classList.toggle('dark-theme', themeName === 'dark');
+          toggleBtn.textContent = themeName === 'dark' ? '◑' : '◐';
+        }
+      });
+    </script>
+    <script>
+      // Настраиваем marked так же, как в Django
+      marked.setOptions({
+        breaks: true,        // \n → <br>
+        gfm: true,           // GitHub Flavored Markdown
+        langPrefix: 'language-' // для подсветки кода (если будешь использовать)
+      });
+    </script>
+  </body>
+</html>

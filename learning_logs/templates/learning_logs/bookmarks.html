@@ -1,0 +1,45 @@
+{% extends "learning_logs/base.html" %}
+{% load markdown_extras %}
+
+{% block page_header %}
+  <h1>Bookmarks</h1>
+{% endblock page_header %}
+
+{% block content %}
+  {% if topics or entries %}
+    {% if topics %}
+      <h3>Favorite Topics</h3>
+      <div class="list-group mb-4">
+        {% for topic in topics %}
+          <div class="list-group-item">
+            <h5>
+              <a href="{% url 'learning_logs:topic' topic.id %}">{{ topic.text }}</a>
+              <small class="text-muted ms-2">
+                {{ topic.entry_set.count }} entry{{ topic.entry_set.count|pluralize }}
+              </small>
+            </h5>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if entries %}
+      <h3>Favorite Entries</h3>
+      <div class="list-group">
+        {% for entry in entries %}
+          <div class="list-group-item">
+            <h5>
+              <a href="{% url 'learning_logs:topic' entry.topic.id %}">{{ entry.topic.text }}</a>
+            </h5>
+            <div class="mt-2">
+              {{ entry.text|markdownify|truncatewords:30 }}
+            </div>
+            <small class="text-muted">{{ entry.date_added|date:"M d, Y" }}</small>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+    <p>You haven't added anything to bookmarks yet.</p>
+  {% endif %}
+{% endblock content %}

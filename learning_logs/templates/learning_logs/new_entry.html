@@ -1,0 +1,129 @@
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+<h3><a href="{% url 'learning_logs:topic' topic.id %}">{{ topic }}</a></h3>
+
+<form action="{% url 'learning_logs:new_entry' topic.id %}" method="post">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label class="form-label">Entry text:</label>
+
+    <!-- Обёртка для textarea и предпросмотра -->
+    <div class="position-relative" style="min-height: 150px;">
+      {{ form.text }}
+       <!-- Кнопка Preview -->
+      <button type="button" id="preview-toggle"
+        class="btn btn-outline-secondary"
+        style="position: absolute; top: 5px; right: 5px; z-index: 10; font-size: 0.85rem; padding: 2px 6px;">
+        Preview
+      </button>
+
+      <!-- Кнопка эмодзи -->
+      <button type="button" class="btn btn-outline-secondary emoji-toggle"
+        style="position: absolute; bottom: 5px; left: 5px; z-index: 10; font-size: 1.4rem; padding: 0;">
+        ☺
+      </button>
+
+      <!-- Панель предпросмотра -->
+      <div id="preview-panel"
+        class="p-3 border rounded bg-light"
+        style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: auto; z-index: 5;">
+      </div>
+    </div>
+
+    <!-- Панель эмодзи -->
+    <div id="emoji-picker" class="mt-2 p-2 border rounded bg-white"
+      style="display: none; position: absolute; z-index: 1000; max-width: 300px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+      {% for emoji in popular_emojis %}
+        <span class="emoji-item" style="cursor: pointer; font-size: 1.4em; padding: 4px;"
+          data-emoji="{{ emoji }}">{{ emoji }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <button class="btn btn-lg btn-primary" name="submit">Add entry</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const textarea = document.querySelector('textarea[name="text"]');
+    const previewToggle = document.getElementById('preview-toggle');
+    const previewPanel = document.getElementById('preview-panel');
+    const emojiPicker = document.getElementById('emoji-picker');
+    const emojiToggle = document.querySelector('.emoji-toggle');
+
+    if (!textarea || !previewPanel) return;
+
+    let isPreviewVisible = false;
+
+    // Переключение
+    if (previewToggle) {
+        previewToggle.addEventListener('click', function () {
+            isPreviewVisible = !isPreviewVisible;
+            textarea.style.display = isPreviewVisible ? 'none' : 'block';
+            previewPanel.style.display = isPreviewVisible ? 'block' : 'none';
+            this.textContent = isPreviewVisible ? 'Write' : 'Preview';
+            if (isPreviewVisible) renderPreview();
+        });
+    }
+
+    // Рендеринг
+    function renderPreview() {
+        if (!isPreviewVisible) return;
+        const html = typeof marked.parse === 'function'
+            ? marked.parse(textarea.value || '')
+            : marked(textarea.value || '');
+        previewPanel.innerHTML = html;
+
+        // Тёмная тема
+        if (document.body.classList.contains('dark-theme')) {
+            previewPanel.className = 'p-3 border rounded bg-dark';
+            previewPanel.style.color = '#e0e0e0';
+        } else {
+            previewPanel.className = 'p-3 border rounded bg-light';
+            previewPanel.style.color = '';
+        }
+    }
+
+    // Обновление
+    let t;
+    textarea.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(renderPreview, 300);
+    });
+
+    // Emoji picker
+    if (emojiToggle && emojiPicker) {
+        emojiToggle.addEventListener('click', e => {
+            e.stopPropagation();
+            emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
+            const r = emojiToggle.getBoundingClientRect();
+            emojiPicker.style.top = (r.bottom + window.scrollY + 5) + 'px';
+            emojiPicker.style.left = (r.left + window.scrollX) + 'px';
+        });
+
+        document.addEventListener('click', e => {
+            if (!emojiPicker.contains(e.target) && e.target !== emojiToggle) {
+                emojiPicker.style.display = 'none';
+            }
+        });
+
+        emojiPicker.addEventListener('click', e => {
+            if (e.target.classList.contains('emoji-item')) {
+                const emoji = e.target.dataset.emoji;
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = textarea.value;
+                textarea.value = text.slice(0, start) + emoji + text.slice(end);
+                const pos = start + emoji.length;
+                textarea.setSelectionRange(pos, pos);
+                textarea.focus();
+                emojiPicker.style.display = 'none';
+                if (isPreviewVisible) renderPreview();
+            }
+        });
+    }
+});
+</script>
+{% endblock content %}

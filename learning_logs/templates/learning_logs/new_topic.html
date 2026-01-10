@@ -1,0 +1,25 @@
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+<h3>Add a new topic:</h3>
+
+<form action="{% url 'learning_logs:new_topic' %}" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-lg btn-primary" name="submit">+ Add topic</button>
+</form>
+
+<hr class="my-4">
+
+<h4>Or import a topic from file:</h4>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="topic_file" class="form-label">Choose a .json file:</label>
+        <input type="file" class="form-control" id="topic_file" name="topic_file" accept=".json" required>
+    </div>
+    <button type="submit" class="btn btn-lg btn-primary">Import topic</button>
+</form>
+
+{% endblock content %}
