@@ -25,7 +25,7 @@
 
 | Light Theme | Dark Theme | Favorites |
 |:-----------:|:----------:|:---------:|
-| ![Light Theme](docs/screenshot-topics-light.png) | ![Dark Theme](docs/screenshot-topics-dark.png) | ![Favorites](docs/screenshot-favorites.png) |
+| ![Light Theme](docs/screenshot-topics-light.png) | ![Dark Theme](docs/screenshot-topics-dark.png) | ![Favorites](docs/screenshot-favourites.png) |
 
 ---
 
