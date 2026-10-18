@@ -58,4 +58,81 @@ venv\Scripts\activate         # Windows
 ```
 
 ### 3. Install dependencies
+```
 pip install -r requirements.txt
+```
+
+### 4. Run migrations and create a superuser
+```
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+### 5. Start the development server
+```
+python manage.py runserver
+```
+
+### 6. Open in browser
+Navigate to http://127.0.0.1:8000
+
+---
+
+## 📁 Project Structure
+learning_log/
+├── learning_logs/          # Core app
+│   ├── models.py           # Topic, Entry, Bookmark
+│   ├── views.py            # Request handlers
+│   ├── urls.py             # Routing
+│   ├── forms.py            # Django forms
+│   └── templatetags/       # Custom filters (markdownify, rough_timesince)
+├── users/                  # Authentication (login, register, logout)
+├── templates/              # Base and page HTML templates
+├── static/                 # CSS, JS, images
+── docs/                   # Screenshots for README
+── manage.py               # Django management script
+└── requirements.txt        # Python dependencies
+
+---
+
+## 📖 Usage
+### Creating a topic
+1. Click + Add new topic on the Topics page.
+2. Enter a name (e.g., "Machine Learning") and save.
+### Writing an entry
+1. Open a topic.
+2. Click + Add new entry.
+3. Write your note using Markdown syntax.
+4. Use the Preview button to see the rendered result.
+5. Click Add entry to save.
+### Searching and sorting
+- Use the search field to filter topics or entries by keyword.
+- Use the Sort dropdown to order by date or alphabetically.
+### Using Favorites
+- Click the ★ icon next to any topic or entry to add it to Favorites.
+- Access all starred items from the Bookmarks tab in the navbar.
+### Exporting / Importing
+- On a topic page, click Export topic to download a .json backup.
+- On the "Add new topic" page, use Import topic to restore from a file.
+
+---
+
+## 🤝 Contributing
+1. Contributions, issues, and feature requests are welcome!
+2. Fork the repository.
+3. Create your feature branch: git checkout -b feature/AmazingFeature
+4. Commit your changes: git commit -m 'Add some AmazingFeature'
+5. Push to the branch: git push origin feature/AmazingFeature
+6. Open a Pull Request.
+
+---
+
+## License
+This project is open-source and available under the MIT License.
+---
+
+## Acknowledgements
+- 📖 Inspired by Python Crash Course by Eric Matthes
+- 🎨 UI built with Bootstrap 4
+- 📝 Markdown parsing powered by the Python-Markdown library
+- 👁️ Live preview uses marked.js
